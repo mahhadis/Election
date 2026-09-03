@@ -30,7 +30,7 @@ jobs:
 
       - name: Set up Mobile App Shell
         run: |
-          npx cap init "My Mobile App" "com.mycompany.myapp" --web-dir "."
+          npx cap init "Smart Dashboard" "com.dashboard.app" --web-dir "www"
           npx cap add android
           npx cap sync android
 
