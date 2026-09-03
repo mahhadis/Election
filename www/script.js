@@ -305,3 +305,20 @@ document.addEventListener('DOMContentLoaded', () => {
   restoreFormDrafts();
   filterRecords();
 });
+// Native Android Back Button Handling
+document.addEventListener('deviceready', () => {
+  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+    window.Capacitor.Plugins.App.addListener('backButton', () => {
+      // If editing, cancel edit mode first
+      if (editIndex !== null) {
+        editIndex = null;
+        document.getElementById('voterForm').reset();
+        document.querySelector('.btn-submit').textContent = '💾 সংরক্ষণ করুন';
+        showToast('এডিট বাতিল করা হয়েছে');
+      } else {
+        // Otherwise exit app smoothly
+        window.Capacitor.Plugins.App.exitApp();
+      }
+    });
+  }
+});
