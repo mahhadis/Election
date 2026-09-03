@@ -7,6 +7,10 @@
 
   <!-- SheetJS for Excel Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  
+  <!-- jsPDF & AutoTable for PDF Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
   <!-- Google Identity Services SDK -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -19,7 +23,7 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       margin: 0;
-      padding: 0 0 70px 0;
+      padding: 0 0 75px 0;
       background-color: #f8fafc;
       color: #0f172a;
     }
@@ -93,23 +97,27 @@
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
     }
     th, td {
       text-align: left;
-      padding: 10px;
+      padding: 10px 8px;
       border-bottom: 1px solid #e2e8f0;
     }
     th {
       background-color: #f1f5f9;
       color: #475569;
     }
+    .action-btn-group {
+      display: flex;
+      gap: 6px;
+    }
     .bottom-nav {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      height: 60px;
+      height: 65px;
       background-color: #ffffff;
       border-top: 1px solid #e2e8f0;
       display: flex;
@@ -123,8 +131,8 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      font-size: 0.75rem;
-      color: #64748b;
+      font-size: 0.72rem;
+      color: #475569;
       font-weight: 600;
       cursor: pointer;
     }
@@ -132,7 +140,7 @@
 </head>
 <body>
 
-  <header>নির্বাচনী ড্যাশবোর্ড</header>
+  <header>নির্বাচনী ম্যানেজমেন্ট ড্যাশবোর্ড</header>
 
   <div id="offline-banner">
     ⚠️ আপনি অফলাইনে আছেন। ডাটা ডিভাইসে সংরক্ষিত হচ্ছে।
@@ -166,15 +174,27 @@
       </form>
     </div>
 
-    <!-- Live Records Card -->
+    <!-- Live Records Card with Search & Filters -->
     <div class="card">
-      <h3 style="margin-top:0;">সংরক্ষিত ডাটা</h3>
+      <h3 style="margin-top:0;">সংরক্ষিত ডাটা তালিকা</h3>
+      
+      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <input type="text" id="searchInput" placeholder="🔍 নাম বা ফোন..." oninput="filterRecords()" style="height: 40px; font-size: 0.85rem;">
+        <select id="filterWard" onchange="filterRecords()" style="height: 40px; font-size: 0.85rem; width: 65%;">
+          <option value="">সব ওয়ার্ড</option>
+          <option value="Ward 1">ওয়ার্ড ১</option>
+          <option value="Ward 2">ওয়ার্ড ২</option>
+          <option value="Ward 3">ওয়ার্ড ৩</option>
+        </select>
+      </div>
+
       <table id="recordsTable">
         <thead>
           <tr>
             <th>নাম</th>
             <th>ফোন</th>
             <th>ওয়ার্ড</th>
+            <th>অ্যাকশন</th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -182,16 +202,19 @@
     </div>
   </div>
 
-  <!-- Bottom Nav Menu -->
+  <!-- Bottom Nav Menu with Direct Action Buttons -->
   <nav class="bottom-nav">
     <button class="nav-item" onclick="exportToExcel()">
-      <span style="font-size: 1.2rem;">📊</span> Excel
+      <span style="font-size: 1.2rem;">📊</span> Excel Export
+    </button>
+    <button class="nav-item" onclick="exportToPDF()">
+      <span style="font-size: 1.2rem;">📄</span> PDF Report
     </button>
     <button class="nav-item" onclick="exportToJSON()">
-      <span style="font-size: 1.2rem;">📁</span> JSON
+      <span style="font-size: 1.2rem;">📁</span> JSON Backup
     </button>
     <button class="nav-item" onclick="syncWithGoogleDrive()">
-      <span style="font-size: 1.2rem;">☁️</span> Drive
+      <span style="font-size: 1.2rem;">☁️</span> Drive Sync
     </button>
   </nav>
 
