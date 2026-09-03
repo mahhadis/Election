@@ -30,18 +30,27 @@
     header {
       background-color: #1e293b;
       color: #ffffff;
-      padding: 16px;
-      text-align: center;
-      font-size: 1.1rem;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.05rem;
       font-weight: 600;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .sync-badge {
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 12px;
+      background: #334155;
+      font-weight: bold;
     }
     #offline-banner {
       display: none;
       background-color: #d97706;
       color: #ffffff;
       text-align: center;
-      padding: 10px;
+      padding: 8px;
       font-size: 0.85rem;
       font-weight: 600;
     }
@@ -136,14 +145,40 @@
       font-weight: 600;
       cursor: pointer;
     }
+    /* Toast Notification System */
+    #toast {
+      visibility: hidden;
+      min-width: 250px;
+      background-color: #1e293b;
+      color: #fff;
+      text-align: center;
+      border-radius: 8px;
+      padding: 12px;
+      position: fixed;
+      z-index: 2000;
+      left: 50%;
+      bottom: 80px;
+      transform: translateX(-50%);
+      font-size: 0.9rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+    }
+    #toast.show {
+      visibility: visible;
+      animation: fadein 0.3s, fadeout 0.3s 2.7s;
+    }
+    @keyframes fadein { from { bottom: 60px; opacity: 0; } to { bottom: 80px; opacity: 1; } }
+    @keyframes fadeout { from { bottom: 80px; opacity: 1; } to { bottom: 60px; opacity: 0; } }
   </style>
 </head>
 <body>
 
-  <header>নির্বাচনী ম্যানেজমেন্ট ড্যাশবোর্ড</header>
+  <header>
+    <span>নির্বাচনী ড্যাশবোর্ড</span>
+    <span id="syncStatus" class="sync-badge">🟡 Local Only</span>
+  </header>
 
   <div id="offline-banner">
-    ⚠️ আপনি অফলাইনে আছেন। ডাটা ডিভাইসে সংরক্ষিত হচ্ছে।
+    ⚠️ আপনি অফলাইনে আছেন। ডাটা মোবাইলে জমা হচ্ছে।
   </div>
 
   <div class="container">
@@ -156,8 +191,8 @@
         </div>
 
         <div class="form-group">
-          <label for="voterPhone">মোবাইল নম্বর</label>
-          <input type="tel" id="voterPhone" placeholder="017XXXXXXXX" oninput="autoSaveFormInput('voterPhone')">
+          <label for="voterPhone">মোবাইল নম্বর * (১১ ডিজিট)</label>
+          <input type="tel" id="voterPhone" required placeholder="017XXXXXXXX" maxlength="11" oninput="autoSaveFormInput('voterPhone')">
         </div>
 
         <div class="form-group">
@@ -174,9 +209,12 @@
       </form>
     </div>
 
-    <!-- Live Records Card with Search & Filters -->
+    <!-- Live Records Card -->
     <div class="card">
-      <h3 style="margin-top:0;">সংরক্ষিত ডাটা তালিকা</h3>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="margin: 0; font-size: 1.05rem;">সংরক্ষিত ডাটা</h3>
+        <span id="recordCounter" style="font-size: 0.8rem; color: #64748b; font-weight: bold;">মোট: 0</span>
+      </div>
       
       <div style="display: flex; gap: 8px; margin-bottom: 12px;">
         <input type="text" id="searchInput" placeholder="🔍 নাম বা ফোন..." oninput="filterRecords()" style="height: 40px; font-size: 0.85rem;">
@@ -202,7 +240,10 @@
     </div>
   </div>
 
-  <!-- Bottom Nav Menu with Direct Action Buttons -->
+  <!-- Native Toast Message Container -->
+  <div id="toast"></div>
+
+  <!-- Bottom Nav Menu -->
   <nav class="bottom-nav">
     <button class="nav-item" onclick="exportToExcel()">
       <span style="font-size: 1.2rem;">📊</span> Excel Export
