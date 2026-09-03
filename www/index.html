@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="bn">
-<head>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>স্মার্ট তথ্য ড্যাশবোর্ড</title>
@@ -322,6 +322,48 @@
   </div>
 
   <script>
+    const GOOGLE_CLIENT_ID = "856362738407-kitu3c7k6if7cgbn9gsq3eq7o3vb1qlr.apps.googleusercontent.com";
+
+function syncWithGoogleDrive() {
+  const tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    callback: async (response) => {
+      if (response.access_token) {
+        await uploadBackupToDrive(response.access_token);
+      }
+    },
+  });
+  tokenClient.requestAccessToken();
+}
+
+async function uploadBackupToDrive(accessToken) {
+  const dataToBackup = typeof recordList !== 'undefined' ? recordList : localStorage;
+  const fileData = JSON.stringify(dataToBackup, null, 2);
+  const metadata = {
+    name: `Election_Data_Backup_${new Date().toISOString().slice(0, 10)}.json`,
+    mimeType: 'application/json'
+  };
+
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  form.append('file', new Blob([fileData], { type: 'application/json' }));
+
+  try {
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + accessToken },
+      body: form
+    });
+    if (res.ok) {
+      alert('গুগল ড্রাইভে সফলভাবে ডাটা ব্যাকআপ হয়েছে!');
+    } else {
+      alert('ড্রাইভ ব্যাকআপ ব্যাহত হয়েছে।');
+    }
+  } catch (err) {
+    alert('ড্রাইভ সিঙ্ক করতে সমস্যা হয়েছে!');
+  }
+}
     // Master Mapping Data
     const wardMap = {
       "Ward 1": ["কৈতরীপাড়া", "সহশ্রাম", "আতরতোপা"],
