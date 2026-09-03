@@ -1,7 +1,7 @@
-// Google OAuth Client Configuration
 const GOOGLE_CLIENT_ID = "856362738407-kitu3c7k6if7cgbn9gsq3eq7o3vb1qlr.apps.googleusercontent.com";
+let recordList = JSON.parse(localStorage.getItem('election_records')) || [];
 
-// 1. Auto-Save Draft to Local Storage
+// 1. Form Auto-Save Hooks
 function autoSaveFormInput(fieldId) {
   const inputElement = document.getElementById(fieldId);
   if (inputElement) {
@@ -9,8 +9,8 @@ function autoSaveFormInput(fieldId) {
   }
 }
 
-function restoreFormDrafts(fieldIds) {
-  fieldIds.forEach(id => {
+function restoreFormDrafts() {
+  ['voterName', 'voterPhone', 'wardNo'].forEach(id => {
     const savedValue = localStorage.getItem('draft_' + id);
     const inputElement = document.getElementById(id);
     if (savedValue && inputElement) {
@@ -19,13 +19,49 @@ function restoreFormDrafts(fieldIds) {
   });
 }
 
-function clearFormDrafts(fieldIds) {
-  fieldIds.forEach(id => {
+function clearFormDrafts() {
+  ['voterName', 'voterPhone', 'wardNo'].forEach(id => {
     localStorage.removeItem('draft_' + id);
   });
 }
 
-// 2. Offline / Online Status Monitoring
+// 2. Submit Logic & UI Table Render
+function handleFormSubmit(event) {
+  event.preventDefault();
+
+  const newRecord = {
+    name: document.getElementById('voterName').value,
+    phone: document.getElementById('voterPhone').value,
+    ward: document.getElementById('wardNo').value,
+    timestamp: new Date().toISOString()
+  };
+
+  recordList.push(newRecord);
+  localStorage.setItem('election_records', JSON.stringify(recordList));
+
+  document.getElementById('voterForm').reset();
+  clearFormDrafts();
+  renderRecordsTable();
+  alert('সফলভাবে ডাটা যুক্ত করা হয়েছে!');
+}
+
+function renderRecordsTable() {
+  const tbody = document.getElementById('tableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  recordList.forEach(item => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${item.name || '-'}</td>
+      <td>${item.phone ? `<a href="tel:${item.phone}">${item.phone}</a>` : '-'}</td>
+      <td>${item.ward || '-'}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+// 3. Network Detection
 function updateOnlineStatus() {
   const banner = document.getElementById('offline-banner');
   if (banner) {
@@ -36,35 +72,31 @@ function updateOnlineStatus() {
 window.addEventListener('online', updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
 
-// Restore draft data & check status when page loads
 document.addEventListener('DOMContentLoaded', () => {
   updateOnlineStatus();
-  restoreFormDrafts(['voterName', 'wardNo']);
+  restoreFormDrafts();
+  renderRecordsTable();
 });
 
-// 3. Export Data to Excel (.xlsx)
+// 4. Exports & Google Drive Sync
 function exportToExcel() {
-  const dataToExport = typeof recordList !== 'undefined' ? recordList : [localStorage];
-  
-  if (!dataToExport || dataToExport.length === 0) {
+  if (recordList.length === 0) {
     alert('রপ্তানি করার জন্য কোনো ডাটা পাওয়া যায়নি!');
     return;
   }
-
-  const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+  const worksheet = XLSX.utils.json_to_sheet(recordList);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Records");
-
-  const fileName = `Election_Data_${new Date().toISOString().slice(0, 10)}.xlsx`;
-  XLSX.writeFile(workbook, fileName);
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Election Records");
+  XLSX.writeFile(workbook, `Election_Data_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-// 4. Export Data to JSON File
 function exportToJSON() {
-  const dataToExport = typeof recordList !== 'undefined' ? recordList : localStorage;
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToExport, null, 2));
+  if (recordList.length === 0) {
+    alert('কোনো ডাটা নেই!');
+    return;
+  }
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(recordList, null, 2));
   const downloadAnchor = document.createElement('a');
-  
   downloadAnchor.setAttribute("href", dataStr);
   downloadAnchor.setAttribute("download", `Election_Data_${new Date().toISOString().slice(0, 10)}.json`);
   document.body.appendChild(downloadAnchor);
@@ -72,7 +104,6 @@ function exportToJSON() {
   downloadAnchor.remove();
 }
 
-// 5. Google Drive Integration
 function syncWithGoogleDrive() {
   const tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID,
@@ -87,8 +118,7 @@ function syncWithGoogleDrive() {
 }
 
 async function uploadBackupToDrive(accessToken) {
-  const dataToBackup = typeof recordList !== 'undefined' ? recordList : localStorage;
-  const fileData = JSON.stringify(dataToBackup, null, 2);
+  const fileData = JSON.stringify(recordList, null, 2);
   const metadata = {
     name: `Election_Data_Backup_${new Date().toISOString().slice(0, 10)}.json`,
     mimeType: 'application/json'
