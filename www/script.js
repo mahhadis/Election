@@ -1,7 +1,8 @@
 const GOOGLE_CLIENT_ID = "856362738407-kitu3c7k6if7cgbn9gsq3eq7o3vb1qlr.apps.googleusercontent.com";
 let recordList = JSON.parse(localStorage.getItem('election_records')) || [];
+let editIndex = null;
 
-// 1. Form Auto-Save Hooks
+// 1. Form Draft Auto-Save Functions
 function autoSaveFormInput(fieldId) {
   const inputElement = document.getElementById(fieldId);
   if (inputElement) {
@@ -25,63 +26,93 @@ function clearFormDrafts() {
   });
 }
 
-// 2. Submit Logic & UI Table Render
+// 2. Add / Edit Record Handling
 function handleFormSubmit(event) {
   event.preventDefault();
 
-  const newRecord = {
-    name: document.getElementById('voterName').value,
-    phone: document.getElementById('voterPhone').value,
+  const recordData = {
+    name: document.getElementById('voterName').value.trim(),
+    phone: document.getElementById('voterPhone').value.trim(),
     ward: document.getElementById('wardNo').value,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toLocaleString('bn-BD')
   };
 
-  recordList.push(newRecord);
-  localStorage.setItem('election_records', JSON.stringify(recordList));
+  if (editIndex !== null) {
+    recordList[editIndex] = recordData;
+    editIndex = null;
+    document.querySelector('.btn-submit').textContent = '💾 সংরক্ষণ করুন';
+  } else {
+    recordList.push(recordData);
+  }
 
+  localStorage.setItem('election_records', JSON.stringify(recordList));
   document.getElementById('voterForm').reset();
   clearFormDrafts();
-  renderRecordsTable();
-  alert('সফলভাবে ডাটা যুক্ত করা হয়েছে!');
+  filterRecords();
 }
 
-function renderRecordsTable() {
+// 3. Render Table & Filter Logic
+function renderRecordsTable(dataToRender) {
   const tbody = document.getElementById('tableBody');
   if (!tbody) return;
   tbody.innerHTML = '';
 
-  recordList.forEach(item => {
+  dataToRender.forEach((item) => {
+    const originalIndex = recordList.indexOf(item);
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${item.name || '-'}</td>
       <td>${item.phone ? `<a href="tel:${item.phone}">${item.phone}</a>` : '-'}</td>
       <td>${item.ward || '-'}</td>
+      <td>
+        <div class="action-btn-group">
+          <button onclick="editRecord(${originalIndex})" style="background: #eab308; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">✏️</button>
+          <button onclick="deleteRecord(${originalIndex})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">🗑️</button>
+        </div>
+      </td>
     `;
     tbody.appendChild(row);
   });
 }
 
-// 3. Network Detection
-function updateOnlineStatus() {
-  const banner = document.getElementById('offline-banner');
-  if (banner) {
-    banner.style.display = navigator.onLine ? 'none' : 'block';
+function filterRecords() {
+  const query = document.getElementById('searchInput').value.toLowerCase();
+  const selectedWard = document.getElementById('filterWard').value;
+
+  const filtered = recordList.filter(item => {
+    const matchesQuery = (item.name && item.name.toLowerCase().includes(query)) ||
+                         (item.phone && item.phone.includes(query));
+    const matchesWard = selectedWard === "" || item.ward === selectedWard;
+    return matchesQuery && matchesWard;
+  });
+
+  renderRecordsTable(filtered);
+}
+
+// 4. In-Place Edit & Delete
+function editRecord(index) {
+  const item = recordList[index];
+  document.getElementById('voterName').value = item.name || '';
+  document.getElementById('voterPhone').value = item.phone || '';
+  document.getElementById('wardNo').value = item.ward || '';
+  
+  editIndex = index;
+  document.querySelector('.btn-submit').textContent = '🔄 আপডেট করুন';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function deleteRecord(index) {
+  if (confirm('আপনি কি এই ভোটার রেকর্ডটি মুছে ফেলতে চান?')) {
+    recordList.splice(index, 1);
+    localStorage.setItem('election_records', JSON.stringify(recordList));
+    filterRecords();
   }
 }
 
-window.addEventListener('online', updateOnlineStatus);
-window.addEventListener('offline', updateOnlineStatus);
-
-document.addEventListener('DOMContentLoaded', () => {
-  updateOnlineStatus();
-  restoreFormDrafts();
-  renderRecordsTable();
-});
-
-// 4. Exports & Google Drive Sync
+// 5. Excel Export Function
 function exportToExcel() {
   if (recordList.length === 0) {
-    alert('রপ্তানি করার জন্য কোনো ডাটা পাওয়া যায়নি!');
+    alert('রপ্তানি করার জন্য কোনো ডাটা পাওয়া যায়নি!');
     return;
   }
   const worksheet = XLSX.utils.json_to_sheet(recordList);
@@ -90,6 +121,46 @@ function exportToExcel() {
   XLSX.writeFile(workbook, `Election_Data_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
+// 6. PDF Export with Formal Header
+function exportToPDF() {
+  if (recordList.length === 0) {
+    alert('PDF তৈরি করার জন্য কোনো ডাটা পাওয়া যায়নি!');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  // Header Title
+  doc.setFontSize(16);
+  doc.text("Election Management Summary Report", 14, 15);
+  doc.setFontSize(10);
+  doc.text(`Generated Date: ${new Date().toLocaleString()}`, 14, 22);
+  doc.text(`Total Records: ${recordList.length}`, 14, 28);
+  doc.setLineWidth(0.5);
+  doc.line(14, 32, 196, 32);
+
+  // Table Mapping
+  const tableData = recordList.map((item, i) => [
+    i + 1,
+    item.name || '-',
+    item.phone || '-',
+    item.ward || '-',
+    item.timestamp || '-'
+  ]);
+
+  doc.autoTable({
+    startY: 36,
+    head: [['#', 'Name', 'Phone', 'Ward', 'Saved Time']],
+    body: tableData,
+    theme: 'striped',
+    headStyles: { fillColor: [30, 41, 59] }
+  });
+
+  doc.save(`Election_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+// 7. JSON Export
 function exportToJSON() {
   if (recordList.length === 0) {
     alert('কোনো ডাটা নেই!');
@@ -104,7 +175,12 @@ function exportToJSON() {
   downloadAnchor.remove();
 }
 
+// 8. Google Drive Integration
 function syncWithGoogleDrive() {
+  if (typeof google === 'undefined' || !google.accounts) {
+    alert('Google Identity SDK লোড হয়নি। অনলাইন কানেকশন চেক করুন।');
+    return;
+  }
   const tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID,
     scope: 'https://www.googleapis.com/auth/drive.file',
@@ -143,3 +219,20 @@ async function uploadBackupToDrive(accessToken) {
     alert('ড্রাইভ সিঙ্ক করতে সমস্যা হয়েছে!');
   }
 }
+
+// 9. Status Monitor & Initialization
+function updateOnlineStatus() {
+  const banner = document.getElementById('offline-banner');
+  if (banner) {
+    banner.style.display = navigator.onLine ? 'none' : 'block';
+  }
+}
+
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateOnlineStatus();
+  restoreFormDrafts();
+  filterRecords();
+});
