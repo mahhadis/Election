@@ -2,96 +2,199 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Election Dashboard</title>
-  
+
   <!-- SheetJS for Excel Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  
+
   <!-- Google Identity Services SDK -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  
+
   <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
     body {
-      font-family: Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       margin: 0;
-      padding: 15px;
-      background-color: #f4f6f9;
+      padding: 0 0 70px 0;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    header {
+      background-color: #1e293b;
+      color: #ffffff;
+      padding: 16px;
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     #offline-banner {
       display: none;
-      background-color: #f59e0b;
-      color: white;
+      background-color: #d97706;
+      color: #ffffff;
       text-align: center;
       padding: 10px;
-      font-weight: bold;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      border-radius: 4px;
-      margin-bottom: 15px;
+      font-size: 0.85rem;
+      font-weight: 600;
     }
-    .action-btn {
-      padding: 10px 15px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-      color: white;
-      margin-right: 5px;
-      margin-bottom: 10px;
+    .container {
+      padding: 16px;
+      max-width: 600px;
+      margin: 0 auto;
     }
-    .btn-excel { background-color: #16a34a; }
-    .btn-json { background-color: #2563eb; }
-    .btn-drive { background-color: #ea4335; }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border: 1px solid #e2e8f0;
+    }
     .form-group {
-      margin-bottom: 12px;
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #334155;
     }
     input, select {
       width: 100%;
+      height: 48px;
+      padding: 0 12px;
+      font-size: 1rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background-color: #ffffff;
+      outline: none;
+    }
+    input:focus, select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
+    }
+    .btn-submit {
+      width: 100%;
+      height: 48px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+    th, td {
+      text-align: left;
       padding: 10px;
-      margin-top: 4px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      box-sizing: border-box;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+      background-color: #f1f5f9;
+      color: #475569;
+    }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background-color: #ffffff;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 1000;
+    }
+    .nav-item {
+      border: none;
+      background: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #64748b;
+      font-weight: 600;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-  <!-- Offline Banner -->
+  <header>নির্বাচনী ড্যাশবোর্ড</header>
+
   <div id="offline-banner">
-    ⚠️ আপনি অফলাইনে আছেন। ডাটা মোবাইলে জমা হচ্ছে, ইন্টারনেট আসলে ড্রাইভ সিঙ্ক হবে।
+    ⚠️ আপনি অফলাইনে আছেন। ডাটা ডিভাইসে সংরক্ষিত হচ্ছে।
   </div>
 
-  <h2>নির্বাচনী ডাটা ড্যাশবোর্ড</h2>
+  <div class="container">
+    <!-- Entry Form Card -->
+    <div class="card">
+      <form id="voterForm" onsubmit="handleFormSubmit(event)">
+        <div class="form-group">
+          <label for="voterName">ভোটারের নাম *</label>
+          <input type="text" id="voterName" required placeholder="নাম লিখুন" oninput="autoSaveFormInput('voterName')">
+        </div>
 
-  <!-- Action Buttons -->
-  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
-    <button class="action-btn btn-excel" onclick="exportToExcel()">📊 Excel এ ডাউনলোড</button>
-    <button class="action-btn btn-json" onclick="exportToJSON()">📁 JSON ব্যাকআপ</button>
-    <button class="action-btn btn-drive" onclick="syncWithGoogleDrive()">☁️ Google Drive সিঙ্ক</button>
+        <div class="form-group">
+          <label for="voterPhone">মোবাইল নম্বর</label>
+          <input type="tel" id="voterPhone" placeholder="017XXXXXXXX" oninput="autoSaveFormInput('voterPhone')">
+        </div>
+
+        <div class="form-group">
+          <label for="wardNo">ওয়ার্ড নম্বর</label>
+          <select id="wardNo" onchange="autoSaveFormInput('wardNo')">
+            <option value="">ওয়ার্ড নির্বাচন করুন</option>
+            <option value="Ward 1">ওয়ার্ড ১ (কৈতরীপাড়া, সহশ্রাম, আতরতোপা)</option>
+            <option value="Ward 2">ওয়ার্ড ২</option>
+            <option value="Ward 3">ওয়ার্ড ৩</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-submit">💾 সংরক্ষণ করুন</button>
+      </form>
+    </div>
+
+    <!-- Live Records Card -->
+    <div class="card">
+      <h3 style="margin-top:0;">সংরক্ষিত ডাটা</h3>
+      <table id="recordsTable">
+        <thead>
+          <tr>
+            <th>নাম</th>
+            <th>ফোন</th>
+            <th>ওয়ার্ড</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
   </div>
 
-  <!-- Form Area -->
-  <form id="voterForm" onsubmit="event.preventDefault();">
-    <div class="form-group">
-      <label for="voterName">ভোটারের নাম:</label>
-      <input type="text" id="voterName" oninput="autoSaveFormInput('voterName')" placeholder="নাম লিখুন">
-    </div>
+  <!-- Bottom Nav Menu -->
+  <nav class="bottom-nav">
+    <button class="nav-item" onclick="exportToExcel()">
+      <span style="font-size: 1.2rem;">📊</span> Excel
+    </button>
+    <button class="nav-item" onclick="exportToJSON()">
+      <span style="font-size: 1.2rem;">📁</span> JSON
+    </button>
+    <button class="nav-item" onclick="syncWithGoogleDrive()">
+      <span style="font-size: 1.2rem;">☁️</span> Drive
+    </button>
+  </nav>
 
-    <div class="form-group">
-      <label for="wardNo">ওয়ার্ড নম্বর:</label>
-      <select id="wardNo" onchange="autoSaveFormInput('wardNo')">
-        <option value="">ওয়ার্ড নির্বাচন করুন</option>
-        <option value="Ward 1">ওয়ার্ড ১ (কৈতরীপাড়া, সহশ্রাম, আতরতোপা)</option>
-        <option value="Ward 2">ওয়ার্ড ২</option>
-        <option value="Ward 3">ওয়ার্ড ৩</option>
-      </select>
-    </div>
-  </form>
-
-  <!-- External JavaScript File -->
   <script src="script.js"></script>
 </body>
 </html>
