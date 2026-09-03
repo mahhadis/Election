@@ -1,6 +1,7 @@
 const GOOGLE_CLIENT_ID = "856362738407-kitu3c7k6if7cgbn9gsq3eq7o3vb1qlr.apps.googleusercontent.com";
 let recordList = JSON.parse(localStorage.getItem('election_records')) || [];
 let editIndex = null;
+let cachedAccessToken = null; // Stores OAuth token for real-time background syncing
 
 // 1. Form Draft Auto-Save Functions
 function autoSaveFormInput(fieldId) {
@@ -26,7 +27,67 @@ function clearFormDrafts() {
   });
 }
 
-// 2. Add / Edit Record Handling
+// 2. Real-Time Google Drive Background Sync Logic
+async function triggerAutoDriveSync() {
+  if (!navigator.onLine) return; // Skip if offline
+
+  if (!cachedAccessToken) {
+    initiateGoogleAuth(true);
+    return;
+  }
+
+  await uploadBackupToDrive(cachedAccessToken, true);
+}
+
+function initiateGoogleAuth(isBackgroundSync = false) {
+  if (typeof google === 'undefined' || !google.accounts) return;
+
+  const tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    callback: async (response) => {
+      if (response.access_token) {
+        cachedAccessToken = response.access_token;
+        await uploadBackupToDrive(cachedAccessToken, isBackgroundSync);
+      }
+    },
+  });
+  tokenClient.requestAccessToken();
+}
+
+function syncWithGoogleDrive() {
+  initiateGoogleAuth(false);
+}
+
+async function uploadBackupToDrive(accessToken, isSilent = false) {
+  const fileData = JSON.stringify(recordList, null, 2);
+  const metadata = {
+    name: `Election_Data_Backup_${new Date().toISOString().slice(0, 10)}.json`,
+    mimeType: 'application/json'
+  };
+
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  form.append('file', new Blob([fileData], { type: 'application/json' }));
+
+  try {
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + accessToken },
+      body: form
+    });
+
+    if (res.ok) {
+      if (!isSilent) alert('গুগল ড্রাইভে সফলভাবে ডাটা ব্যাকআপ হয়েছে!');
+    } else if (!isSilent) {
+      alert('ড্রাইভ ব্যাকআপ ব্যাহত হয়েছে।');
+    }
+  } catch (err) {
+    if (!isSilent) alert('ড্রাইভ সিঙ্ক করতে সমস্যা হয়েছে!');
+  }
+}
+
+// 3. Add / Edit Record Handling with Real-Time Sync Hook
 function handleFormSubmit(event) {
   event.preventDefault();
 
@@ -49,9 +110,12 @@ function handleFormSubmit(event) {
   document.getElementById('voterForm').reset();
   clearFormDrafts();
   filterRecords();
+
+  // Automatic Real-Time Drive Backup Trigger
+  triggerAutoDriveSync();
 }
 
-// 3. Render Table & Filter Logic
+// 4. Table Rendering & Filter Logic
 function renderRecordsTable(dataToRender) {
   const tbody = document.getElementById('tableBody');
   if (!tbody) return;
@@ -89,7 +153,7 @@ function filterRecords() {
   renderRecordsTable(filtered);
 }
 
-// 4. In-Place Edit & Delete
+// 5. In-Place Edit & Delete Actions with Real-Time Sync Hook
 function editRecord(index) {
   const item = recordList[index];
   document.getElementById('voterName').value = item.name || '';
@@ -106,10 +170,13 @@ function deleteRecord(index) {
     recordList.splice(index, 1);
     localStorage.setItem('election_records', JSON.stringify(recordList));
     filterRecords();
+
+    // Automatic Real-Time Drive Backup Trigger
+    triggerAutoDriveSync();
   }
 }
 
-// 5. Excel Export Function
+// 6. Exports (Excel, PDF, JSON)
 function exportToExcel() {
   if (recordList.length === 0) {
     alert('রপ্তানি করার জন্য কোনো ডাটা পাওয়া যায়নি!');
@@ -121,7 +188,6 @@ function exportToExcel() {
   XLSX.writeFile(workbook, `Election_Data_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-// 6. PDF Export with Formal Header
 function exportToPDF() {
   if (recordList.length === 0) {
     alert('PDF তৈরি করার জন্য কোনো ডাটা পাওয়া যায়নি!');
@@ -131,7 +197,7 @@ function exportToPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
-  // Header Title
+  // Custom Header Format
   doc.setFontSize(16);
   doc.text("Election Management Summary Report", 14, 15);
   doc.setFontSize(10);
@@ -140,7 +206,7 @@ function exportToPDF() {
   doc.setLineWidth(0.5);
   doc.line(14, 32, 196, 32);
 
-  // Table Mapping
+  // Table Structure
   const tableData = recordList.map((item, i) => [
     i + 1,
     item.name || '-',
@@ -160,7 +226,6 @@ function exportToPDF() {
   doc.save(`Election_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
-// 7. JSON Export
 function exportToJSON() {
   if (recordList.length === 0) {
     alert('কোনো ডাটা নেই!');
@@ -175,52 +240,7 @@ function exportToJSON() {
   downloadAnchor.remove();
 }
 
-// 8. Google Drive Integration
-function syncWithGoogleDrive() {
-  if (typeof google === 'undefined' || !google.accounts) {
-    alert('Google Identity SDK লোড হয়নি। অনলাইন কানেকশন চেক করুন।');
-    return;
-  }
-  const tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: GOOGLE_CLIENT_ID,
-    scope: 'https://www.googleapis.com/auth/drive.file',
-    callback: async (response) => {
-      if (response.access_token) {
-        await uploadBackupToDrive(response.access_token);
-      }
-    },
-  });
-  tokenClient.requestAccessToken();
-}
-
-async function uploadBackupToDrive(accessToken) {
-  const fileData = JSON.stringify(recordList, null, 2);
-  const metadata = {
-    name: `Election_Data_Backup_${new Date().toISOString().slice(0, 10)}.json`,
-    mimeType: 'application/json'
-  };
-
-  const form = new FormData();
-  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-  form.append('file', new Blob([fileData], { type: 'application/json' }));
-
-  try {
-    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + accessToken },
-      body: form
-    });
-    if (res.ok) {
-      alert('গুগল ড্রাইভে সফলভাবে ডাটা ব্যাকআপ হয়েছে!');
-    } else {
-      alert('ড্রাইভ ব্যাকআপ ব্যাহত হয়েছে।');
-    }
-  } catch (err) {
-    alert('ড্রাইভ সিঙ্ক করতে সমস্যা হয়েছে!');
-  }
-}
-
-// 9. Status Monitor & Initialization
+// 7. Connectivity Monitor & Initialization
 function updateOnlineStatus() {
   const banner = document.getElementById('offline-banner');
   if (banner) {
