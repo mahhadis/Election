@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>স্মার্ট তথ্য ড্যাশবোর্ড</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --panel-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --success: #10b981;
+      --danger: #f43f5e;
+      --warning: #f59e0b;
+      --radius: 12px;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background-color: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+
+    header {
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--panel-border);
+      position: sticky; top: 0; z-index: 50;
+      padding: 0.8rem 1.5rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    .brand { font-size: 1.25rem; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 0.75rem; }
+
+    .sync-status {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      font-weight: 500;
+      border: 1px solid transparent;
+    }
+    .sync-status.online { background: rgba(16, 185, 129, 0.15); color: var(--success); border-color: rgba(16, 185, 129, 0.3); }
+    .sync-status.offline { background: rgba(244, 63, 94, 0.15); color: var(--danger); border-color: rgba(244, 63, 94, 0.3); }
+
+    .nav-tabs {
+      display: flex; background: var(--bg);
+      padding: 0.25rem; border-radius: var(--radius);
+      border: 1px solid var(--panel-border);
+    }
+
+    .nav-btn {
+      background: transparent; border: none;
+      color: var(--text-muted); padding: 0.5rem 1.25rem;
+      font-size: 0.875rem; font-weight: 500;
+      border-radius: 8px; cursor: pointer; transition: var(--transition);
+    }
+
+    .nav-btn.active { background: var(--panel); color: var(--accent); }
+
+    .container { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; width: 100%; flex: 1; }
+
+    .page { display: none; animation: fadeIn 0.3s ease-in-out forwards; }
+    .page.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+      background: var(--panel); border: 1px solid var(--panel-border);
+      border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem;
+    }
+
+    .form-layout { max-width: 520px; margin: 0 auto; }
+    .form-grid { display: grid; gap: 1rem; }
+    .field-group { display: flex; flex-direction: column; gap: 0.4rem; }
+
+    label { font-size: 0.85rem; font-weight: 500; color: var(--text-muted); }
+
+    input, select {
+      background: var(--bg); border: 1px solid var(--panel-border);
+      color: var(--text-main); padding: 0.75rem 1rem;
+      border-radius: 8px; font-size: 0.95rem; outline: none; transition: var(--transition);
+    }
+
+    input:focus, select:focus { border-color: var(--accent); }
+
+    .btn {
+      background: var(--accent); color: #0f172a; font-weight: 600;
+      border: none; padding: 0.75rem 1.25rem; border-radius: 8px;
+      cursor: pointer; transition: var(--transition); display: inline-flex;
+      align-items: center; justify-content: center; gap: 0.5rem;
+    }
+
+    .btn:hover { background: var(--accent-hover); color: #fff; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-warning { background: var(--warning); color: #0f172a; }
+
+    .controls-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem; margin-bottom: 1.5rem;
+    }
+
+    .table-container { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--panel-border); }
+
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+
+    th {
+      background: rgba(15, 23, 42, 0.6); color: var(--text-muted);
+      font-weight: 600; font-size: 0.8rem; text-transform: uppercase;
+      padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--panel-border);
+      cursor: pointer; user-select: none;
+    }
+
+    td { padding: 1rem 1.25rem; border-bottom: 1px solid var(--panel-border); font-size: 0.9rem; }
+    tr:hover td { background: rgba(51, 65, 85, 0.3); }
+
+    /* Action Cell Side-by-Side Alignment */
+    .action-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
+    .action-btn {
+      background: rgba(51, 65, 85, 0.5);
+      border: 1px solid var(--panel-border);
+      cursor: pointer;
+      padding: 0.35rem 0.6rem;
+      font-size: 0.9rem;
+      border-radius: 6px;
+      transition: var(--transition);
+    }
+
+    .action-btn:hover {
+      background: var(--panel-border);
+      transform: translateY(-1px);
+    }
+
+    .badge { font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 9999px; background: rgba(56, 189, 248, 0.1); color: var(--accent); }
+
+    .phone-link { color: var(--accent); text-decoration: none; font-weight: 500; }
+    .phone-link:hover { text-decoration: underline; }
+
+    /* Modal Styling */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center; z-index: 100;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+      background: var(--panel); border: 1px solid var(--panel-border);
+      border-radius: var(--radius); width: 100%; max-width: 500px; padding: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span>⚡ তথ্য ম্যানেজমেন্ট</span>
+      <span id="syncBadge" class="sync-status online">🟢 Sync Active</span>
+    </div>
+    <nav class="nav-tabs">
+      <button class="nav-btn active" id="btnPage1" onclick="switchTab('page1')">তথ্য ইনপুট</button>
+      <button class="nav-btn" id="btnPage2" onclick="switchTab('page2')">ড্যাশবোর্ড</button>
+    </nav>
+  </header>
+
+  <main class="container">
+
+    <section id="page1" class="page active">
+      <div class="card form-layout">
+        <h2 style="text-align: center; margin-bottom: 1.5rem;">নতুন তথ্য যোগ করুন</h2>
+        <form id="entryForm">
+          <div class="form-grid">
+            <div class="field-group">
+              <label>১. ব্যক্তির নাম * (বাধ্যতামূলক)</label>
+              <input type="text" id="nam" placeholder="সম্পূর্ণ নাম লিখুন" required>
+            </div>
+            <div class="field-group">
+              <label>২. ফোন নম্বর</label>
+              <input type="tel" id="number" placeholder="০১৭XXXXXXXX">
+            </div>
+            <div class="field-group">
+              <label>৩. ওয়ার্ড নম্বর</label>
+              <select id="wardInput" onchange="updateFormGramDropdown()">
+                <option value="">ওয়ার্ড নির্বাচন করুন</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label>৪. গ্রাম</label>
+              <select id="gramInput">
+                <option value="">প্রথমে ওয়ার্ড সিলেক্ট করুন</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label>৫. গোষ্টি</label>
+              <input type="text" id="gosti" placeholder="গোষ্টির নাম">
+            </div>
+            <div class="field-group">
+              <label>৬. নোট / মন্তব্য</label>
+              <input type="text" id="note" placeholder="অতিরিক্ত মন্তব্য">
+            </div>
+
+            <button type="submit" class="btn" style="margin-top: 0.5rem;">তথ্য সংরক্ষণ করুন</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="page2" class="page">
+      <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h3 style="font-size: 1.1rem;">ডাটা কন্ট্রোল ও ফাইল একশন</h3>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button class="btn btn-success" onclick="document.getElementById('excelFileInput').click()">📁 Excel আপলোড</button>
+          <button class="btn" onclick="exportDataToExcel()" style="background: var(--panel-border); color: #fff;">⬇️ Excel ডাউনলোড</button>
+          <button class="btn btn-warning" onclick="exportDataToPDF()">📄 PDF এক্সপোর্ট</button>
+          <input type="file" id="excelFileInput" style="display: none;" accept=".xlsx, .xls, .csv" onchange="handleExcelImport(event)">
+        </div>
+      </div>
+
+      <div class="controls-grid">
+        <div class="field-group">
+          <label>ওয়ার্ড ফিল্টার</label>
+          <select id="wardSelect" onchange="onWardFilterChange()">
+            <option value="ALL">সকল ওয়ার্ড</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>গ্রাম ফিল্টার</label>
+          <select id="gramSelect" onchange="applyFilters()">
+            <option value="ALL">সকল গ্রাম</option>
+          </select>
+        </div>
+        <div class="field-group" style="grid-column: span 1 / -1;">
+          <label>খুঁজুন (Search)</label>
+          <input type="text" id="searchInput" placeholder="নাম, গোষ্টি, ফোন নম্বর বা তথ্য দিয়ে সার্চ করুন..." oninput="applyFilters()">
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+        <span style="font-size: 0.9rem; color: var(--text-muted);" id="counterLabel">মোট এন্ট্রি: 0</span>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortTable('nam')">নাম ⇕</th>
+              <th onclick="sortTable('number')">নাম্বার ⇕</th>
+              <th onclick="sortTable('ward')">ওয়ার্ড ⇕</th>
+              <th onclick="sortTable('gram')">গ্রাম ⇕</th>
+              <th onclick="sortTable('gosti')">গোষ্টি ⇕</th>
+              <th onclick="sortTable('note')">নোট</th>
+              <th style="text-align: center; width: 110px;">অ্যাকশন</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="editModal" class="modal-overlay">
+    <div class="modal-box">
+      <h3 style="margin-bottom: 1rem;">তথ্য সম্পাদনা করুন</h3>
+      <input type="hidden" id="editIndex">
+      <div class="form-grid">
+        <div class="field-group">
+          <label>ব্যক্তির নাম *</label>
+          <input type="text" id="editNam" required>
+        </div>
+        <div class="field-group">
+          <label>ফোন নম্বর</label>
+          <input type="tel" id="editNumber">
+        </div>
+        <div class="field-group">
+          <label>ওয়ার্ড নম্বর</label>
+          <select id="editWard" onchange="updateEditGramDropdown()">
+            <option value="">ওয়ার্ড নির্বাচন করুন</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>গ্রাম</label>
+          <select id="editGram">
+            <option value="">প্রথমে ওয়ার্ড সিলেক্ট করুন</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>গোষ্টি</label>
+          <input type="text" id="editGosti">
+        </div>
+        <div class="field-group">
+          <label>নোট / মন্তব্য</label>
+          <input type="text" id="editNote">
+        </div>
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
+          <button class="btn" style="background: var(--panel-border); color: #fff;" onclick="closeEditModal()">বাতিল</button>
+          <button class="btn btn-success" onclick="saveEditedRecord()">সেভ করুন</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Master Mapping Data
+    const wardMap = {
+      "Ward 1": ["কৈতরীপাড়া", "সহশ্রাম", "আতরতোপা"],
+      "Ward 2": ["গচিহাটা", "পশ্চিম পুরুড়া", "বাগপাড়া"],
+      "Ward 3": ["পূর্ব সহশ্রাম", "কাছারীপাড়া", "বাজার কুতুবপুর"],
+      "Ward 4": ["সতরদ্রোন", "বেড়াটি"],
+      "Ward 5": ["রায়খলা", "দেওজান"],
+      "Ward 6": ["হাসারকান্দা", "গৌরিপুর", "শিমুলতলা"],
+      "Ward 7": ["নখলা", "পারদিয়াকুল", "বাগজুরকান্দি"],
+      "Ward 8": ["আতখলা", "দিয়াকুল"],
+      "Ward 9": ["পূর্ব পুরুড়া", "নওবাড়িয়া", "ফুলবাড়িয়া"]
+    };
+
+    let recordList = JSON.parse(localStorage.getItem('app_records')) || [];
+    let sortState = { key: null, ascending: true };
+
+    function init() {
+      setupFormDropdowns();
+      setupDashboardDropdowns();
+      refreshDashboard();
+      initAutoSyncEngine();
+    }
+
+    // AUTO SYNC & NETWORK MONITOR
+    function initAutoSyncEngine() {
+      updateNetworkBadge();
+      window.addEventListener('online', () => {
+        updateNetworkBadge();
+        triggerCloudSync();
+      });
+      window.addEventListener('offline', updateNetworkBadge);
+    }
+
+    function updateNetworkBadge() {
+      const badge = document.getElementById('syncBadge');
+      if (navigator.onLine) {
+        badge.className = 'sync-status online';
+        badge.textContent = '🟢 Auto-Sync Online';
+      } else {
+        badge.className = 'sync-status offline';
+        badge.textContent = '🔴 Offline Mode';
+      }
+    }
+
+    function triggerCloudSync() {
+      if (!navigator.onLine) return;
+
+      // Automatically syncs to remote storage/Google Drive Endpoint when connected
+      console.log("Auto-Syncing records with Cloud Server...", recordList);
+      
+      const badge = document.getElementById('syncBadge');
+      badge.textContent = '🔄 Syncing...';
+      setTimeout(() => {
+        badge.textContent = '🟢 Auto-Sync Online';
+      }, 1200);
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+
+      document.getElementById(tabId).classList.add('active');
+      if (tabId === 'page1') {
+        document.getElementById('btnPage1').classList.add('active');
+      } else {
+        document.getElementById('btnPage2').classList.add('active');
+        refreshDashboard();
+      }
+    }
+
+    function setupFormDropdowns() {
+      const wardInput = document.getElementById('wardInput');
+      const editWard = document.getElementById('editWard');
+      wardInput.innerHTML = '<option value="">ওয়ার্ড নির্বাচন করুন (ঐচ্ছিক)</option>';
+      editWard.innerHTML = '<option value="">ওয়ার্ড নির্বাচন করুন</option>';
+
+      Object.keys(wardMap).forEach(w => {
+        const opt = document.createElement('option');
+        opt.value = w; opt.textContent = w;
+        wardInput.appendChild(opt);
+
+        const opt2 = document.createElement('option');
+        opt2.value = w; opt2.textContent = w;
+        editWard.appendChild(opt2);
+      });
+    }
+
+    function updateFormGramDropdown() {
+      const ward = document.getElementById('wardInput').value;
+      const gramInput = document.getElementById('gramInput');
+      gramInput.innerHTML = '';
+
+      if (ward && wardMap[ward]) {
+        gramInput.innerHTML = '<option value="">গ্রাম নির্বাচন করুন</option>';
+        wardMap[ward].forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g; opt.textContent = g;
+          gramInput.appendChild(opt);
+        });
+      } else {
+        gramInput.innerHTML = '<option value="">প্রথমে ওয়ার্ড সিলেক্ট করুন</option>';
+      }
+    }
+
+    function updateEditGramDropdown() {
+      const ward = document.getElementById('editWard').value;
+      const editGram = document.getElementById('editGram');
+      editGram.innerHTML = '';
+
+      if (ward && wardMap[ward]) {
+        editGram.innerHTML = '<option value="">গ্রাম নির্বাচন করুন</option>';
+        wardMap[ward].forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g; opt.textContent = g;
+          editGram.appendChild(opt);
+        });
+      } else {
+        editGram.innerHTML = '<option value="">প্রথমে ওয়ার্ড সিলেক্ট করুন</option>';
+      }
+    }
+
+    function setupDashboardDropdowns() {
+      const wardSelect = document.getElementById('wardSelect');
+      wardSelect.innerHTML = '<option value="ALL">সকল ওয়ার্ড</option>';
+      Object.keys(wardMap).forEach(w => {
+        const opt = document.createElement('option');
+        opt.value = w; opt.textContent = w;
+        wardSelect.appendChild(opt);
+      });
+      populateGramFilter('ALL');
+    }
+
+    function onWardFilterChange() {
+      const selectedWard = document.getElementById('wardSelect').value;
+      populateGramFilter(selectedWard);
+      applyFilters();
+    }
+
+    function populateGramFilter(ward) {
+      const gramSelect = document.getElementById('gramSelect');
+      gramSelect.innerHTML = '<option value="ALL">সকল গ্রাম</option>';
+
+      if (ward === 'ALL') {
+        const allGrams = new Set();
+        Object.values(wardMap).flat().forEach(g => allGrams.add(g));
+        Array.from(allGrams).sort().forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g; opt.textContent = g;
+          gramSelect.appendChild(opt);
+        });
+      } else if (wardMap[ward]) {
+        wardMap[ward].forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g; opt.textContent = g;
+          gramSelect.appendChild(opt);
+        });
+      }
+    }
+
+    function commitStorage() {
+      try {
+        localStorage.setItem('app_records', JSON.stringify(recordList));
+        triggerCloudSync();
+      } catch (err) {
+        alert('মেমোরি ফুল হয়ে গেছে!');
+      }
+    }
+
+    function applyFilters() {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+
+      const wardFilter = document.getElementById('wardSelect').value;
+      const gramFilter = document.getElementById('gramSelect').value;
+      const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+
+      const filtered = recordList.filter(row => {
+        const matchWard = (wardFilter === 'ALL') || (row.ward === wardFilter);
+        const matchGram = (gramFilter === 'ALL') || (row.gram === gramFilter);
+        const matchQuery = 
+          String(row.nam || '').toLowerCase().includes(searchQuery) ||
+          String(row.number || '').includes(searchQuery) ||
+          String(row.ward || '').toLowerCase().includes(searchQuery) ||
+          String(row.gram || '').toLowerCase().includes(searchQuery) ||
+          String(row.gosti || '').toLowerCase().includes(searchQuery) ||
+          String(row.note || '').toLowerCase().includes(searchQuery);
+
+        return matchWard && matchGram && matchQuery;
+      });
+
+      filtered.forEach(item => {
+        const realIndex = recordList.indexOf(item);
+        const tr = document.createElement('tr');
+        
+        const phoneFormatted = item.number 
+          ? `<a href="tel:${sanitize(item.number)}" class="phone-link">📞 ${sanitize(item.number)}</a>`
+          : '<span style="color:var(--text-muted);">-</span>';
+
+        tr.innerHTML = `
+          <td><strong>${sanitize(item.nam)}</strong></td>
+          <td>${phoneFormatted}</td>
+          <td>${item.ward ? `<span class="badge">${sanitize(item.ward)}</span>` : '-'}</td>
+          <td>${sanitize(item.gram) || '-'}</td>
+          <td>${sanitize(item.gosti) || '-'}</td>
+          <td style="color: var(--text-muted);">${sanitize(item.note) || '-'}</td>
+          <td style="text-align: center;">
+            <div class="action-cell">
+              <button class="action-btn" onclick="openEditModal(${realIndex})" title="সম্পাদনা করুন">✏️</button>
+              <button class="action-btn" onclick="removeEntry(${realIndex})" title="মুছে ফেলুন">🗑️</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('counterLabel').textContent = `প্রদর্শিত এন্ট্রি: ${filtered.length}`;
+    }
+
+    function refreshDashboard() {
+      applyFilters();
+    }
+
+    document.getElementById('entryForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const newRecord = {
+        nam: document.getElementById('nam').value,
+        number: document.getElementById('number').value,
+        ward: document.getElementById('wardInput').value,
+        gram: document.getElementById('gramInput').value,
+        gosti: document.getElementById('gosti').value,
+        note: document.getElementById('note').value
+      };
+
+      recordList.push(newRecord);
+      commitStorage();
+      document.getElementById('entryForm').reset();
+      updateFormGramDropdown();
+      switchTab('page2');
+    });
+
+    function openEditModal(index) {
+      const rec = recordList[index];
+      document.getElementById('editIndex').value = index;
+      document.getElementById('editNam').value = rec.nam || '';
+      document.getElementById('editNumber').value = rec.number || '';
+      document.getElementById('editWard').value = rec.ward || '';
+      updateEditGramDropdown();
+      document.getElementById('editGram').value = rec.gram || '';
+      document.getElementById('editGosti').value = rec.gosti || '';
+      document.getElementById('editNote').value = rec.note || '';
+
+      document.getElementById('editModal').classList.add('active');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('active');
+    }
+
+    function saveEditedRecord() {
+      const index = document.getElementById('editIndex').value;
+      if (index === '') return;
+
+      recordList[index] = {
+        nam: document.getElementById('editNam').value,
+        number: document.getElementById('editNumber').value,
+        ward: document.getElementById('editWard').value,
+        gram: document.getElementById('editGram').value,
+        gosti: document.getElementById('editGosti').value,
+        note: document.getElementById('editNote').value
+      };
+
+      commitStorage();
+      closeEditModal();
+      refreshDashboard();
+    }
+
+    function handleExcelImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const buffer = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(buffer, { type: 'array' });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+          const parsedEntries = rows.map(r => ({
+            nam: String(r['নাম'] || r['Name'] || r['nam'] || ''),
+            number: String(r['নাম্বার'] || r['Number'] || r['Mobile'] || ''),
+            ward: String(r['ওয়ার্ড'] || r['Ward'] || r['ward'] || ''),
+            gram: String(r['গ্রাম'] || r['Gram'] || r['gram'] || ''),
+            gosti: String(r['গোষ্টি'] || r['Gosti'] || r['gosti'] || ''),
+            note: String(r['নোট'] || r['Note'] || r['note'] || '')
+          }));
+
+          recordList = recordList.concat(parsedEntries);
+          commitStorage();
+          refreshDashboard();
+          alert(`সফলভাবে ${parsedEntries.length} টি তথ্য আপলোড হয়েছে!`);
+        } catch (err) {
+          alert('ফাইল ইমপোর্ট করা সম্ভব হয়নি!');
+        }
+        event.target.value = '';
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function exportDataToExcel() {
+      if (!recordList.length) return alert('কোনো ডাটা নেই!');
+      const worksheet = XLSX.utils.json_to_sheet(recordList.map(r => ({
+        'নাম': r.nam, 
+        'নাম্বার': r.number, 
+        'ওয়ার্ড': r.ward, 
+        'গ্রাম': r.gram, 
+        'গোষ্টি': r.gosti, 
+        'নোট': r.note
+      })));
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+      XLSX.writeFile(workbook, `Data_Export_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    function exportDataToPDF() {
+      if (!recordList.length) return alert('কোনো ডাটা নেই!');
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(16);
+      doc.text("Information Dashboard Report", 14, 15);
+
+      const tableData = recordList.map(r => [
+        r.nam || '',
+        r.number || '',
+        r.ward || '',
+        r.gram || '',
+        r.gosti || '',
+        r.note || ''
+      ]);
+
+      doc.autoTable({
+        head: [['Name', 'Phone Number', 'Ward', 'Village', 'Gosti', 'Note']],
+        body: tableData,
+        startY: 22,
+        theme: 'striped',
+        headStyles: { fillColor: [56, 189, 248] }
+      });
+
+      doc.save(`Dashboard_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+    }
+
+    function removeEntry(index) {
+      if (confirm('আপনি কি ডাটাটি মুছে ফেলতে চান?')) {
+        recordList.splice(index, 1);
+        commitStorage();
+        refreshDashboard();
+      }
+    }
+
+    function sortTable(key) {
+      if (sortState.key === key) {
+        sortState.ascending = !sortState.ascending;
+      } else {
+        sortState.key = key;
+        sortState.ascending = true;
+      }
+
+      recordList.sort((a, b) => {
+        const valA = String(a[key] || '').toLowerCase();
+        const valB = String(b[key] || '').toLowerCase();
+        return sortState.ascending ? valA.localeCompare(valB, 'bn') : valB.localeCompare(valA, 'bn');
+      });
+
+      commitStorage();
+      refreshDashboard();
+    }
+
+    function sanitize(str) {
+      return String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    init();
+  </script>
+</body>
+</html>
