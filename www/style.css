@@ -1,0 +1,14 @@
+/* Add safe area inset support to header and bottom navbar */
+header {
+  padding-top: env(safe-area-inset-top, 12px);
+}
+
+.bottom-nav, footer {
+  padding-bottom: env(safe-area-inset-bottom, 12px);
+}
+
+/* Fix table cell wrapping on mobile */
+table th, table td {
+  white-space: nowrap;
+  padding: 8px 6px;
+}
