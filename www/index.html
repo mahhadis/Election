@@ -2,263 +2,118 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Election Dashboard</title>
-
-  <!-- SheetJS for Excel Export -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  
-  <!-- jsPDF & AutoTable for PDF Export -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-
-  <!-- Google Identity Services SDK -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-
-  <style>
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      margin: 0;
-      padding: 0 0 75px 0;
-      background-color: #f8fafc;
-      color: #0f172a;
-    }
-    header {
-      background-color: #1e293b;
-      color: #ffffff;
-      padding: 14px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 1.05rem;
-      font-weight: 600;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .sync-badge {
-      font-size: 0.75rem;
-      padding: 4px 8px;
-      border-radius: 12px;
-      background: #334155;
-      font-weight: bold;
-    }
-    #offline-banner {
-      display: none;
-      background-color: #d97706;
-      color: #ffffff;
-      text-align: center;
-      padding: 8px;
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-    .container {
-      padding: 16px;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-    .card {
-      background: #ffffff;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      border: 1px solid #e2e8f0;
-    }
-    .form-group {
-      margin-bottom: 14px;
-    }
-    label {
-      display: block;
-      font-size: 0.9rem;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: #334155;
-    }
-    input, select {
-      width: 100%;
-      height: 48px;
-      padding: 0 12px;
-      font-size: 1rem;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      background-color: #ffffff;
-      outline: none;
-    }
-    input:focus, select:focus {
-      border-color: #2563eb;
-      box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
-    }
-    .btn-submit {
-      width: 100%;
-      height: 48px;
-      background-color: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 0.88rem;
-    }
-    th, td {
-      text-align: left;
-      padding: 10px 8px;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    th {
-      background-color: #f1f5f9;
-      color: #475569;
-    }
-    .action-btn-group {
-      display: flex;
-      gap: 6px;
-    }
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 65px;
-      background-color: #ffffff;
-      border-top: 1px solid #e2e8f0;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      z-index: 1000;
-    }
-    .nav-item {
-      border: none;
-      background: none;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      font-size: 0.72rem;
-      color: #475569;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    /* Toast Notification System */
-    #toast {
-      visibility: hidden;
-      min-width: 250px;
-      background-color: #1e293b;
-      color: #fff;
-      text-align: center;
-      border-radius: 8px;
-      padding: 12px;
-      position: fixed;
-      z-index: 2000;
-      left: 50%;
-      bottom: 80px;
-      transform: translateX(-50%);
-      font-size: 0.9rem;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.15);
-    }
-    #toast.show {
-      visibility: visible;
-      animation: fadein 0.3s, fadeout 0.3s 2.7s;
-    }
-    @keyframes fadein { from { bottom: 60px; opacity: 0; } to { bottom: 80px; opacity: 1; } }
-    @keyframes fadeout { from { bottom: 80px; opacity: 1; } to { bottom: 60px; opacity: 0; } }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>নির্বাচনী ড্যাশবোর্ড</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+  <!-- Header Section -->
   <header>
-    <span>নির্বাচনী ড্যাশবোর্ড</span>
-    <span id="syncStatus" class="sync-badge">🟡 Local Only</span>
+    <h1>নির্বাচনী ড্যাশবোর্ড</h1>
+    <div class="sync-badge">
+      <span>⏳</span> Syncing...
+    </div>
   </header>
 
-  <div id="offline-banner">
-    ⚠️ আপনি অফলাইনে আছেন। ডাটা মোবাইলে জমা হচ্ছে।
-  </div>
-
-  <div class="container">
-    <!-- Entry Form Card -->
-    <div class="card">
-      <form id="voterForm" onsubmit="handleFormSubmit(event)">
+  <!-- Main Content Container -->
+  <main class="container">
+    
+    <!-- Input Form Card -->
+    <section class="card">
+      <form id="voterForm">
         <div class="form-group">
           <label for="voterName">ভোটারের নাম *</label>
-          <input type="text" id="voterName" required placeholder="নাম লিখুন" oninput="autoSaveFormInput('voterName')">
+          <input type="text" id="voterName" class="form-control" placeholder="নাম লিখুন" required>
         </div>
 
         <div class="form-group">
           <label for="voterPhone">মোবাইল নম্বর * (১১ ডিজিট)</label>
-          <input type="tel" id="voterPhone" required placeholder="017XXXXXXXX" maxlength="11" oninput="autoSaveFormInput('voterPhone')">
+          <input type="tel" id="voterPhone" class="form-control" placeholder="017XXXXXXXX" required>
         </div>
 
         <div class="form-group">
-          <label for="wardNo">ওয়ার্ড নম্বর</label>
-          <select id="wardNo" onchange="autoSaveFormInput('wardNo')">
-            <option value="">ওয়ার্ড নির্বাচন করুন</option>
-            <option value="Ward 1">ওয়ার্ড ১ (কৈতরীপাড়া, সহশ্রাম, আতরতোপা)</option>
-            <option value="Ward 2">ওয়ার্ড ২</option>
-            <option value="Ward 3">ওয়ার্ড ৩</option>
+          <label for="wardSelect">ওয়ার্ড নম্বর</label>
+          <select id="wardSelect" class="form-control">
+            <option value="">ওয়ার্ড নির্বাচন করুন</option>
+            <option value="Ward 1">ওয়ার্ড ১</option>
+            <option value="Ward 2">ওয়ার্ড ২</option>
+            <option value="Ward 3">ওয়ার্ড ৩</option>
           </select>
         </div>
 
-        <button type="submit" class="btn-submit">💾 সংরক্ষণ করুন</button>
+        <button type="submit" class="btn-submit">
+          💾 সংরক্ষণ করুন
+        </button>
       </form>
-    </div>
+    </section>
 
-    <!-- Live Records Card -->
-    <div class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h3 style="margin: 0; font-size: 1.05rem;">সংরক্ষিত ডাটা</h3>
-        <span id="recordCounter" style="font-size: 0.8rem; color: #64748b; font-weight: bold;">মোট: 0</span>
+    <!-- Data Display Card -->
+    <section class="card">
+      <div class="card-header-flex">
+        <h2 class="card-title">সংরক্ষিত ডাটা</h2>
+        <span class="card-subtitle">প্রদর্শিত: 1 / 1</span>
       </div>
-      
-      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-        <input type="text" id="searchInput" placeholder="🔍 নাম বা ফোন..." oninput="filterRecords()" style="height: 40px; font-size: 0.85rem;">
-        <select id="filterWard" onchange="filterRecords()" style="height: 40px; font-size: 0.85rem; width: 65%;">
+
+      <div class="filter-grid">
+        <input type="text" class="form-control" placeholder="🔍 নাম বা ফোন...">
+        <select class="form-control">
           <option value="">সব ওয়ার্ড</option>
-          <option value="Ward 1">ওয়ার্ড ১</option>
-          <option value="Ward 2">ওয়ার্ড ২</option>
-          <option value="Ward 3">ওয়ার্ড ৩</option>
+          <option value="Ward 1">ওয়ার্ড ১</option>
+          <option value="Ward 2">ওয়ার্ড ২</option>
         </select>
       </div>
 
-      <table id="recordsTable">
-        <thead>
-          <tr>
-            <th>নাম</th>
-            <th>ফোন</th>
-            <th>ওয়ার্ড</th>
-            <th>অ্যাকশন</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-    </div>
-  </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>নাম</th>
+              <th>ফোন</th>
+              <th>ওয়ার্ড</th>
+              <th>অ্যাকশন</th>
+            </tr>
+          </thead>
+          <tbody id="voterTableBody">
+            <tr>
+              <td>Sadman Akand</td>
+              <td><a href="tel:01823232020" class="phone-link">01823232020</a></td>
+              <td>Ward 2</td>
+              <td>
+                <div class="action-btn-group">
+                  <button class="icon-btn btn-edit">✏️</button>
+                  <button class="icon-btn btn-delete">🗑️</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-  <!-- Native Toast Message Container -->
-  <div id="toast"></div>
+  </main>
 
-  <!-- Bottom Nav Menu -->
-  <nav class="bottom-nav">
-    <button class="nav-item" onclick="exportToExcel()">
-      <span style="font-size: 1.2rem;">📊</span> Excel Export
+  <!-- Bottom Navigation Bar -->
+  <footer>
+    <button class="nav-item">
+      <span class="icon">📊</span>
+      <span>Excel Export</span>
     </button>
-    <button class="nav-item" onclick="exportToPDF()">
-      <span style="font-size: 1.2rem;">📄</span> PDF Report
+    <button class="nav-item">
+      <span class="icon">📄</span>
+      <span>PDF Report</span>
     </button>
-    <button class="nav-item" onclick="exportToJSON()">
-      <span style="font-size: 1.2rem;">📁</span> JSON Backup
+    <button class="nav-item">
+      <span class="icon">📁</span>
+      <span>JSON Backup</span>
     </button>
-    <button class="nav-item" onclick="syncWithGoogleDrive()">
-      <span style="font-size: 1.2rem;">☁️</span> Drive Sync
+    <button class="nav-item">
+      <span class="icon">☁️</span>
+      <span>Drive Sync</span>
     </button>
-  </nav>
+  </footer>
 
+  <!-- Script Import -->
   <script src="script.js"></script>
 </body>
 </html>
