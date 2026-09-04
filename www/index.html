@@ -10,10 +10,15 @@
 
   <!-- Header Section -->
   <header>
-    <h1>নির্বাচনী ড্যাশবোর্ড</h1>
-    <div class="sync-badge">
-      <span>⏳</span> Syncing...
+    <div class="header-title-group">
+      <h1>নির্বাচনী ড্যাশবোর্ড</h1>
+      <div class="sync-badge">
+        <span class="sync-icon">⏳</span> Syncing...
+      </div>
     </div>
+    <button id="themeToggle" class="theme-toggle-btn" aria-label="Toggle Theme">
+      <span id="themeIcon">🌙</span>
+    </button>
   </header>
 
   <!-- Main Content Container -->
@@ -21,28 +26,60 @@
     
     <!-- Input Form Card -->
     <section class="card">
+      <h2 class="card-title" style="margin-bottom: 14px;">ভোটার তথ্য এন্ট্রি</h2>
       <form id="voterForm">
+        
+        <!-- Mandatory Field -->
         <div class="form-group">
-          <label for="voterName">ভোটারের নাম *</label>
+          <label for="voterName">ভোটারের নাম <span class="required-star">*</span></label>
           <input type="text" id="voterName" class="form-control" placeholder="নাম লিখুন" required>
         </div>
 
-        <div class="form-group">
-          <label for="voterPhone">মোবাইল নম্বর * (১১ ডিজিট)</label>
-          <input type="tel" id="voterPhone" class="form-control" placeholder="017XXXXXXXX" required>
+        <!-- Optional Fields -->
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="voterPhone">মোবাইল নম্বর <span class="optional-tag">(ঐচ্ছিক)</span></label>
+            <input type="tel" id="voterPhone" class="form-control" placeholder="017XXXXXXXX">
+          </div>
+
+          <div class="form-group">
+            <label for="wardSelect">ওয়ার্ড নম্বর <span class="optional-tag">(ঐচ্ছিক)</span></label>
+            <select id="wardSelect" class="form-control">
+              <option value="">ওয়ার্ড নির্বাচন করুন</option>
+              <option value="Ward 1">ওয়ার্ড ১</option>
+              <option value="Ward 2">ওয়ার্ড ২</option>
+              <option value="Ward 3">ওয়ার্ড ৩</option>
+              <option value="Ward 4">ওয়ার্ড ৪</option>
+              <option value="Ward 5">ওয়ার্ড ৫</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="gramSelect">গ্রাম <span class="optional-tag">(ঐচ্ছিক)</span></label>
+            <select id="gramSelect" class="form-control">
+              <option value="">গ্রাম নির্বাচন করুন</option>
+              <option value="উত্তর পাড়া">উত্তর পাড়া</option>
+              <option value="দক্ষিণ পাড়া">দক্ষিণ পাড়া</option>
+              <option value="পূর্ব পাড়া">পূর্ব পাড়া</option>
+              <option value="পশ্চিম পাড়া">পশ্চিম পাড়া</option>
+              <option value="মধ্য পাড়া">মধ্য পাড়া</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="voterGosthi">গোষ্ঠী <span class="optional-tag">(ঐচ্ছিক)</span></label>
+            <input type="text" id="voterGosthi" class="form-control" placeholder="গোষ্ঠীর নাম লিখুন">
+          </div>
         </div>
 
         <div class="form-group">
-          <label for="wardSelect">ওয়ার্ড নম্বর</label>
-          <select id="wardSelect" class="form-control">
-            <option value="">ওয়ার্ড নির্বাচন করুন</option>
-            <option value="Ward 1">ওয়ার্ড ১</option>
-            <option value="Ward 2">ওয়ার্ড ২</option>
-            <option value="Ward 3">ওয়ার্ড ৩</option>
-          </select>
+          <label for="voterNote">নোট / মন্তব্য <span class="optional-tag">(ঐচ্ছিক)</span></label>
+          <textarea id="voterNote" class="form-control" rows="2" placeholder="অতিরিক্ত তথ্য..."></textarea>
         </div>
 
-        <button type="submit" class="btn-submit">
+        <button type="submit" id="submitBtn" class="btn-submit">
           💾 সংরক্ষণ করুন
         </button>
       </form>
@@ -52,15 +89,18 @@
     <section class="card">
       <div class="card-header-flex">
         <h2 class="card-title">সংরক্ষিত ডাটা</h2>
-        <span class="card-subtitle">প্রদর্শিত: 1 / 1</span>
+        <span id="recordCount" class="card-subtitle">প্রদর্শিত: 0 / 0</span>
       </div>
 
       <div class="filter-grid">
-        <input type="text" class="form-control" placeholder="🔍 নাম বা ফোন...">
-        <select class="form-control">
+        <input type="text" id="searchInput" class="form-control" placeholder="🔍 নাম, ফোন বা গোষ্ঠী...">
+        <select id="wardFilter" class="form-control">
           <option value="">সব ওয়ার্ড</option>
           <option value="Ward 1">ওয়ার্ড ১</option>
           <option value="Ward 2">ওয়ার্ড ২</option>
+          <option value="Ward 3">ওয়ার্ড ৩</option>
+          <option value="Ward 4">ওয়ার্ড ৪</option>
+          <option value="Ward 5">ওয়ার্ড ৫</option>
         </select>
       </div>
 
@@ -71,21 +111,13 @@
               <th>নাম</th>
               <th>ফোন</th>
               <th>ওয়ার্ড</th>
+              <th>গ্রাম</th>
+              <th>গোষ্ঠী</th>
               <th>অ্যাকশন</th>
             </tr>
           </thead>
           <tbody id="voterTableBody">
-            <tr>
-              <td>Sadman Akand</td>
-              <td><a href="tel:01823232020" class="phone-link">01823232020</a></td>
-              <td>Ward 2</td>
-              <td>
-                <div class="action-btn-group">
-                  <button class="icon-btn btn-edit">✏️</button>
-                  <button class="icon-btn btn-delete">🗑️</button>
-                </div>
-              </td>
-            </tr>
+            <!-- Dynamic rows inserted via script.js -->
           </tbody>
         </table>
       </div>
@@ -95,25 +127,24 @@
 
   <!-- Bottom Navigation Bar -->
   <footer>
-    <button class="nav-item">
+    <button class="nav-item" id="btnExportExcel">
       <span class="icon">📊</span>
       <span>Excel Export</span>
     </button>
-    <button class="nav-item">
+    <button class="nav-item" id="btnExportPDF">
       <span class="icon">📄</span>
       <span>PDF Report</span>
     </button>
-    <button class="nav-item">
+    <button class="nav-item" id="btnBackupJSON">
       <span class="icon">📁</span>
       <span>JSON Backup</span>
     </button>
-    <button class="nav-item">
+    <button class="nav-item" id="btnDriveSync">
       <span class="icon">☁️</span>
       <span>Drive Sync</span>
     </button>
   </footer>
 
-  <!-- Script Import -->
   <script src="script.js"></script>
 </body>
 </html>
