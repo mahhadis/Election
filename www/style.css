@@ -1,22 +1,45 @@
-/* CSS Variables */
+/* Color Variables & Themes */
 :root {
   --primary-color: #2563eb;
   --primary-hover: #1d4ed8;
   --bg-color: #f8fafc;
   --card-bg: #ffffff;
-  --text-main: #1e293b;
+  --text-main: #0f172a;
   --text-muted: #64748b;
-  --border-color: #e2e8f0;
+  --border-color: #cbd5e1;
+  --input-bg: #ffffff;
+  --header-bg: #0f172a;
+  --header-text: #ffffff;
+  --footer-bg: #ffffff;
+  --table-header-bg: #f1f5f9;
   --edit-btn: #eab308;
   --delete-btn: #ef4444;
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* Reset & Base Styles */
+[data-theme="dark"] {
+  --primary-color: #3b82f6;
+  --primary-hover: #60a5fa;
+  --bg-color: #0f172a;
+  --card-bg: #1e293b;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  --input-bg: #0f172a;
+  --header-bg: #1e293b;
+  --header-text: #ffffff;
+  --footer-bg: #1e293b;
+  --table-header-bg: #334155;
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+/* Reset & Base Layout */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
 }
 
 body {
@@ -25,88 +48,130 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  /* Safe area padding so bottom toolbar is never blocked by gesture bars */
-  padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
 }
 
-/* Header with Native Status Bar Padding */
+/* Header & Status Bar Area */
 header {
-  background-color: #1e293b;
-  color: #ffffff;
+  background-color: var(--header-bg);
+  color: var(--header-text);
   padding-top: max(16px, env(safe-area-inset-top, 16px));
-  padding-bottom: 16px;
-  padding-left: 20px;
-  padding-right: 20px;
+  padding-bottom: 14px;
+  padding-left: 18px;
+  padding-right: 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 header h1 {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.15rem;
+  font-weight: 700;
 }
 
 .sync-badge {
-  background-color: #2563eb;
-  color: white;
-  font-size: 0.8rem;
-  padding: 6px 12px;
+  background-color: rgba(37, 99, 235, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  font-size: 0.75rem;
+  padding: 4px 10px;
   border-radius: 20px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
-/* Container & Layout */
+.theme-toggle-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+/* Container & Cards */
 .container {
   width: 100%;
-  max-width: 600px;
+  max-width: 650px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .card {
   background-color: var(--card-bg);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--card-shadow);
   border: 1px solid var(--border-color);
 }
 
-/* Form Styles */
+/* Forms & Inputs */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .form-group {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .form-group label {
   display: block;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
   color: var(--text-main);
+}
+
+.required-star {
+  color: #ef4444;
+  font-weight: bold;
+}
+
+.optional-tag {
+  font-size: 0.75rem;
+  font-weight: normal;
+  color: var(--text-muted);
 }
 
 .form-control {
   width: 100%;
-  padding: 12px;
+  padding: 10px 12px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  font-size: 0.95rem;
-  background-color: #fff;
+  font-size: 0.9rem;
+  background-color: var(--input-bg);
+  color: var(--text-main);
   outline: none;
-  transition: border-color 0.2s;
 }
 
 .form-control:focus {
   border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+textarea.form-control {
+  resize: vertical;
 }
 
 .btn-submit {
@@ -116,21 +181,16 @@ header h1 {
   border: none;
   padding: 12px;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 8px;
-  transition: background-color 0.2s;
 }
 
-.btn-submit:hover {
-  background-color: var(--primary-hover);
-}
-
-/* Table Section Controls */
+/* Card Header & Controls */
 .card-header-flex {
   display: flex;
   justify-content: space-between;
@@ -139,18 +199,18 @@ header h1 {
 }
 
 .card-title {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
 }
 
 .card-subtitle {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
 }
 
 .filter-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.2fr 0.8fr;
   gap: 8px;
   margin-bottom: 12px;
 }
@@ -166,7 +226,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
 }
 
 th, td {
@@ -176,13 +236,9 @@ th, td {
 }
 
 th {
-  background-color: #f1f5f9;
+  background-color: var(--table-header-bg);
   font-weight: 600;
   color: var(--text-muted);
-}
-
-tr:last-child td {
-  border-bottom: none;
 }
 
 .phone-link {
@@ -197,23 +253,23 @@ tr:last-child td {
 
 .icon-btn {
   border: none;
-  padding: 6px 10px;
+  padding: 5px 8px;
   border-radius: 6px;
   cursor: pointer;
   color: white;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .btn-edit { background-color: var(--edit-btn); }
 .btn-delete { background-color: var(--delete-btn); }
 
-/* Bottom Navigation Bar with Navigation Gesture Insets */
+/* Bottom Navigation Bar */
 footer {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: #ffffff;
+  background-color: var(--footer-bg);
   border-top: 1px solid var(--border-color);
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -230,7 +286,7 @@ footer {
   justify-content: center;
   text-decoration: none;
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   gap: 4px;
   background: none;
   border: none;
@@ -238,5 +294,5 @@ footer {
 }
 
 .nav-item span.icon {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
 }
